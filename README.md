@@ -1,36 +1,48 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Grasp
+**Grasp** is a Next.js-based frontend for visualizing academic syllabi as interactive knowledge graphs. Clickable nodes represent topics, and each one generates an AI-powered explanation using Google's Gemini API — helping students understand concepts, not just read them.
+
+## Features
+- 📚 Interactive syllabus graph (powered by React Flow)
+- 🤖 On-click topic explanation using Gemini
+- 🧩 Modular panel layout with resizable panes
+- 🪄 Markdown-rendered topic summaries
+- 🧠 Persistent explanation cache via Zustand (no repeat API calls)
 
 ## Getting Started
 
-First, run the development server:
-
+### 1. Clone the repo
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/aether-flux/grasp-frontend.git
+cd grasp-frontend
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Install Dependencies
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+### 3. Set up the environment
+Make sure the backend is running at `http://localhost:5000/`. You can edit the API base URL if needed in the fetch calls.
+More info about the backend [here](https://github.com/swarupgoswami/grasp-backend).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 4. Run the dev server
+```bash
+npm run dev
+```
+The app will be available at `http://localhost:3000/`.
 
-## Learn More
+## Built With
+- Next.js (App Router)
+- React Flow
+- Zustand
+- TailwindCSS + ShadCN
+- React Markdown + remark-gfm, for rendering explanations.
 
-To learn more about Next.js, take a look at the following resources:
+## Gemini API
+This frontend relies on a custom backend endpoint that interfaces with Gemini to generate explanations. For local development, ensure your backend is:
+- Running at `http://localhost:5000/`
+- Has a valid `GEMINI_API_KEY` and `MONGO_URI` in its `.env`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Project Philosophy
+Grasp aims to turn syllabi into **living maps of knowledge**, helping learners not just navigate what to study — but understand why.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
