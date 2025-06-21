@@ -12,51 +12,141 @@ import {
   PanelResizeHandle
 } from 'react-resizable-panels';
 import 'react-resizable-panels';
-
-const syllabusA = {
-  nodes: [
-    { id: 'root', data: { label: '🧠 Syllabus A' }, position: { x: 300, y: 50 } },
-    { id: 'a1', data: { label: '📘 Module A1' }, position: { x: 100, y: 200 } },
-    { id: 'a2', data: { label: '📘 Module A2' }, position: { x: 500, y: 200 } },
-  ],
-  edges: [
-    { id: 'e-root-a1', source: 'root', target: 'a1', type: 'smoothstep' },
-    { id: 'e-root-a2', source: 'root', target: 'a2', type: 'smoothstep' },
-  ]
-};
-
-// 🧠 Dummy graph 2
-const syllabusB = {
-  nodes: [
-    { id: 'rootB', data: { label: '🧠 Syllabus B' }, position: { x: 300, y: 50 } },
-    { id: 'b1', data: { label: '📘 Module B1' }, position: { x: 100, y: 200 } },
-    { id: 'b2', data: { label: '📘 Module B2' }, position: { x: 500, y: 200 } },
-  ],
-  edges: [
-    { id: 'e-rootB-b1', source: 'rootB', target: 'b1', type: 'smoothstep' },
-    { id: 'e-rootB-b2', source: 'rootB', target: 'b2', type: 'smoothstep' },
-  ]
-};
-
-const graphs = {
-  A: syllabusA,
-  B: syllabusB,
-};
+import { useExplanationStore } from "@/lib/store/useExplanationStore";
 
 export default function GraphPage() {
-  const [selectedGraphKey, setSelectedGraphKey] = useState('A');
   const [sidePanel, setSidePanel] = useState(null);
   const { user } = useUser();
+
+  const contentJson = useSyllabusStore((state) => state.elaboratedText);
+  console.log("Content: ", contentJson);
+
+  function convertToReactFlowFormat(raw) {
+    const nodes = [];
+    const edges = [];
+
+    // Root node
+    const rootId = 'root';
+    const rootLabel = raw['1']?.title || 'Untitled Syllabus';
+    nodes.push({
+      id: rootId,
+      data: { label: '🧠 ' + rootLabel },
+      position: { x: 300, y: 50 },
+    });
+
+    const topLevel = raw['2'] || [];
+    const secondLevel = raw['3'] || [];
+
+    // Track positions
+    const spacingX = 250;
+    const spacingY = 150;
+
+    topLevel.forEach((module, idx) => {
+      const modId = module._id;
+      const modLabel = '📘 ' + module.title;
+
+      nodes.push({
+        id: modId,
+        data: { label: modLabel },
+        position: {
+          x: 100 + idx * spacingX,
+          y: 200,
+        },
+      });
+
+      edges.push({
+        id: `e-${rootId}-${modId}`,
+        source: rootId,
+        target: modId,
+        type: 'smoothstep',
+      });
+
+      // Children of this module (3rd level)
+      const children = secondLevel[idx] || [];
+      children.forEach((child, cIdx) => {
+        const childId = child._id;
+        const childLabel = '📗 ' + child.title;
+
+        nodes.push({
+          id: childId,
+          data: { label: childLabel },
+          position: {
+            x: 100 + idx * spacingX + cIdx * 50,
+            y: 350,
+          },
+        });
+
+        edges.push({
+          id: `e-${modId}-${childId}`,
+          source: modId,
+          target: childId,
+          type: 'smoothstep',
+        });
+      });
+    });
+
+    return { nodes, edges };
+  }
+
+  const { nodes, edges } = convertToReactFlowFormat(contentJson || {});
+
+  const handleNodeClick = async (id, rawLabel) => {
+    // Convert label to plain string
+    let label;
+
+    if (typeof rawLabel === "string") {
+      label = rawLabel;
+    } else if (rawLabel?.props?.children) {
+      // If it's a JSX element like <div>Text</div>
+      label = Array.isArray(rawLabel.props.children)
+        ? rawLabel.props.children.join("")
+        : rawLabel.props.children.toString();
+    } else {
+      label = "Unknown Node";
+    }
+
+    setSidePanel({ id, label, loading: true });
+
+    const subject = contentJson?.["1"]?.title || "Unknown subject";
+
+    const explanation = await useExplanationStore.getState().getExplanation(subject, label);
+
+    setSidePanel({ id, label, content: explanation });
+
+    // try {
+    //   console.log("🧪 label = ", label);
+    //   console.log("🧪 typeof label = ", typeof label);
+    //
+    //   const res = await fetch("http://localhost:5000/api/syllabus/elaborate", {
+    //     method: "POST",
+    //     headers: {
+    //       "Content-Type": "application/json",
+    //     },
+    //     body: JSON.stringify({
+    //       summarize: {
+    //         topic: label,
+    //         sub: contentJson?.["1"]?.title || "Unknown subject",
+    //       }
+    //     })
+    //   });
+    //   const data = await res.json();
+    //   console.log("data is ", data);
+    //
+    //   setSidePanel({ id, label, content: typeof data.explanation === "string" ? data.explanation : "No explanation found." });
+    //   console.log("type of data explanation is: ", typeof data.explanation);
+    // } catch (e) {
+    //   console.error("Failed to fetch explanation", e);
+    //   setSidePanel({
+    //     id,
+    //     label,
+    //     content: `Error fetching explanation: ${e}`,
+    //   });
+    // }
+  }
 
   if (!user) return <p>Not logged in!</p>
   
   console.log(user);
-
-  let selectedGraph = graphs[selectedGraphKey];
-
-  useEffect(() => {
-    selectedGraph = graphs[selectedGraphKey];
-  }, [selectedGraphKey]);
 
    return (
    <PanelGroup direction="horizontal" className="w-full h-screen">
@@ -65,17 +155,11 @@ export default function GraphPage() {
         <div className="p-4">
           <h2 className="font-semibold text-lg mb-4">📚 Syllabi</h2>
           <h4 className="font-medium text-md mb-8">Welcome, {user.email}!</h4>
-          {Object.keys(graphs).map((key) => (
-            <button
-              key={key}
-              onClick={() => setSelectedGraphKey(key)}
-              className={`block w-full text-left px-3 py-2 mb-2 rounded ${
-                selectedGraphKey === key ? 'bg-blue-500 text-white' : 'hover:bg-gray-200'
-              }`}
-            >
-              Syllabus {key}
-            </button>
-          ))}
+          <button
+            className={`block w-full text-left px-3 py-2 mb-2 rounded bg-blue-500 text-[#efefef] font-medium`}
+          >
+            {contentJson["1"].title}
+          </button>
         </div>
       </Panel>
 
@@ -90,9 +174,9 @@ export default function GraphPage() {
       {/* Graph Panel */}
       <Panel minSize={30} className="relative bg-white">
         <SyllabusNodes
-          nodesData={selectedGraph.nodes}
-          edgesData={selectedGraph.edges}
-          onNodeClick={(id, label) => setSidePanel({ id, label })}
+          nodesData={nodes}
+          edgesData={edges}
+          onNodeClick={handleNodeClick}
         />
       </Panel>
 
@@ -107,16 +191,16 @@ export default function GraphPage() {
       {/* Right Sidebar Panel */}
       <Panel defaultSize={25} minSize={15} maxSize={35} className="bg-white border-l border-gray-300">
         {sidePanel ? (
-          <div className="p-4">
+          <div className="p-4 h-full overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold">{sidePanel.label}</h3>
               <button onClick={() => setSidePanel(null)} className="text-gray-600 hover:text-black">
                 ✖
               </button>
             </div>
-            <p className="text-sm text-gray-700">
-              Info for <strong>{sidePanel.label}</strong> will be shown here. Gemini ELI5, flashcard generation, etc.
-            </p>
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {sidePanel.content}
+              </ReactMarkdown>
           </div>
         ) : (
           <div className="p-4 text-gray-400 italic">Click a node to see its details</div>

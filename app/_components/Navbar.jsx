@@ -1,9 +1,11 @@
 "use client";
 
 import { useUser } from "@civic/auth/react";
+import { AppNavbar } from "./AppNavbar";
+import { LandingNavbar } from "./LandingNavbar";
 
 export function Navbar () {
   const { user } = useUser();
 
-  return session ? <AppNavbar /> : <LandingNavbar />;
+  return user ? <AppNavbar /> : <LandingNavbar />;
 }
